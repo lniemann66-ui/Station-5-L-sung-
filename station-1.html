@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spurensicherung Station 1 – Der Tatort: Der Waldboden</title>
+<style>
+  :root{--wa-dunkel:#075E54;--wa-gruen:#128C7E;--blase-user:#DCF8C6;--bg:#ECE5DD;--text:#303030}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",Calibri,Arial,sans-serif;background:#cfd8cc;display:flex;justify-content:center;min-height:100vh}
+  .app{width:100%;max-width:480px;height:100vh;display:flex;flex-direction:column;background:var(--bg);box-shadow:0 0 20px rgba(0,0,0,.25);position:relative;overflow:hidden}
+  header{background:var(--wa-dunkel);color:#fff;padding:10px 12px;display:flex;align-items:center;gap:10px}
+  .back{font-size:20px}
+  .avatar{width:40px;height:40px;border-radius:50%;background:#dcf8c6;display:flex;align-items:center;justify-content:center;font-size:22px}
+  header h1{font-size:16.5px;font-weight:600;line-height:1.15}
+  header small{font-size:12px;opacity:.85}
+  #progress{height:4px;background:#b7d8c9}
+  #bar{height:100%;width:0;background:#25D366;transition:width .5s}
+  #chat{flex:1;overflow-y:auto;padding:12px 10px;display:flex;flex-direction:column;gap:6px;
+    background-image:radial-gradient(rgba(0,0,0,.035) 1px,transparent 1px);background-size:14px 14px}
+  .tagchip{align-self:center;background:#e1f2fb;color:#54656f;font-size:12px;padding:4px 10px;border-radius:8px;box-shadow:0 1px 1px rgba(0,0,0,.1)}
+  .msg{max-width:86%;padding:7px 10px 6px;border-radius:9px;font-size:15px;line-height:1.38;color:var(--text);
+    box-shadow:0 1px 1px rgba(0,0,0,.13);animation:pop .22s ease;position:relative}
+  .bot{background:#fff;align-self:flex-start;border-top-left-radius:0}
+  .user{background:var(--blase-user);align-self:flex-end;border-top-right-radius:0}
+  .name{display:block;color:var(--wa-gruen);font-size:12.5px;font-weight:600;margin-bottom:2px}
+  .zeit{display:block;text-align:right;font-size:10.5px;color:#8a8a8a;margin-top:2px}
+  .user .zeit b{color:#34B7F1;font-weight:700;margin-left:2px}
+  .ok{border-left:5px solid #25D366}
+  .nok{border-left:5px solid #e57373}
+  .info{border-left:5px solid #ffb300;background:#fffbe6}
+  .finale{border-left:5px solid #25D366;background:#f1fff0;font-size:16px;text-align:center}
+  .finale .emojis{font-size:26px;line-height:1.5;display:block}
+  .finale .gross{display:block;font-weight:800;font-size:18px;color:var(--wa-dunkel);margin:6px 0}
+  /* Code-Kasten */
+  .codebox{margin:10px 0 6px;padding:12px 10px;border:3px dashed var(--wa-dunkel);border-radius:12px;background:#fff;
+    animation:glow 1.6s infinite}
+  .codebox .label{display:block;font-size:13px;font-weight:700;color:var(--wa-gruen);letter-spacing:1px;text-transform:uppercase}
+  .codebox .zahl{display:block;font-size:44px;font-weight:900;letter-spacing:10px;color:var(--wa-dunkel);
+    font-family:"Courier New",monospace;margin:4px 0 2px;padding-left:10px}
+  @keyframes glow{50%{box-shadow:0 0 14px 3px rgba(37,211,102,.55)}}
+  .stempel{align-self:center;border:3px solid var(--wa-dunkel);color:var(--wa-dunkel);font-weight:800;letter-spacing:2px;
+    padding:8px 16px;border-radius:8px;transform:rotate(-4deg);background:#fff;text-align:center;animation:pop .4s ease}
+  .typing{display:flex;gap:4px;padding:12px 14px}
+  .typing span{width:8px;height:8px;border-radius:50%;background:#9aa7a1;animation:bl 1s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes bl{0%,80%,100%{opacity:.3}40%{opacity:1}}
+  @keyframes pop{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+  /* Bodenprofil */
+  .profil{border-radius:8px;overflow:hidden;margin:6px 0 2px;font-size:12.5px;color:#fff;font-weight:600}
+  .profil .l{padding:9px 10px;display:flex;justify-content:space-between;align-items:center}
+  .l1{background:#b07d22}.l2{background:#5b3a1e}.l3{background:#8d8d8d}
+  .profil .mark{outline:3px dashed #ffeb3b;outline-offset:-3px;animation:puls 1.2s infinite}
+  @keyframes puls{50%{filter:brightness(1.25)}}
+  /* Antworten */
+  #answers{background:#f0f0f0;padding:8px;display:flex;flex-direction:column;gap:6px;border-top:1px solid #ddd;max-height:46vh;overflow-y:auto}
+  #answers:empty{display:none}
+  .opt{background:#fff;border:1.5px solid var(--wa-gruen);color:var(--wa-dunkel);border-radius:18px;padding:9px 14px;font-size:14.5px;
+    text-align:left;cursor:pointer;font-family:inherit;line-height:1.3;transition:.15s}
+  .opt:hover,.opt:active{background:var(--wa-gruen);color:#fff}
+  /* Emoji-Regen */
+  .regen{position:absolute;top:-40px;font-size:26px;pointer-events:none;animation:fall linear forwards;z-index:10}
+  @keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:.9}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <span class="back">←</span>
+    <div class="avatar">🕵️</div>
+    <div><h1>Kommissarin Laubach</h1><small id="status">online</small></div>
+  </header>
+  <div id="progress"><div id="bar"></div></div>
+  <div id="chat"></div>
+  <div id="answers"></div>
+</div>
+
+<script>
+/* ================= EINSTELLUNGEN ================= */
+const CODE = "1034";   // Der Code, der am Ende angezeigt wird
+
+/* ================= LOB (wechselt zufällig) ================= */
+const LOB = ["Super gemacht! 👏","Volltreffer! 🎯","Genau so! 🕵️","Bravo, scharfer Blick! 🔍","Stark ermittelt! 💪",
+  "Top, Detektiv*in! ⭐","Richtig kombiniert! 🧠","Messerscharf! 🔎","Glänzend! ✨","Das sitzt! 🙌","Spitze! 🌟","Ein echtes Ermittlungstalent! 🏅"];
+const LOB2 = ["Diesmal sitzt es! 💪","Zweiter Versuch, voller Erfolg! 🎉","Gut nachgedacht, jetzt stimmt es! 👏","Dranbleiben hat sich gelohnt! 🌟"];
+let letztesLob = -1;
+function lob(zweite){
+  const liste = zweite ? LOB2 : LOB; let i;
+  do { i = Math.floor(Math.random()*liste.length); } while(i===letztesLob && liste.length>1);
+  letztesLob = i; return liste[i];
+}
+
+/* ================= FRAGEN (Lösungen Station 1) ================= */
+function profil(markiert){
+  const m = n => markiert===n ? " mark" : "";
+  return '<div class="profil">' +
+    '<div class="l l1'+m(1)+'"><span>🍂 Oberste Schicht</span><span>'+(markiert===1?'❓':'·')+'</span></div>' +
+    '<div class="l l2'+m(2)+'"><span>🟤 Darunter</span><span>'+(markiert===2?'❓':'·')+'</span></div>' +
+    '<div class="l l3"><span>🪨 Mineralboden</span><span>·</span></div></div>';
+}
+
+const FRAGEN = [
+ { q:"Willkommen am Tatort! 🌲 Ein Spatenstich legt den Waldboden frei. Ganz oben liegen frisch gefallene Blätter, Zweige und Früchte, noch kaum verändert. Wie heißt diese Schicht?",
+   vis: profil(1),
+   o:[{t:"Streuschicht",ok:true},{t:"Vermoderungsschicht"},{t:"Gesteinsschicht"},{t:"Wurzelschicht"}],
+   tipp:"Achte darauf, dass die Blätter in dieser Schicht noch kaum verändert sind.",
+   e:"Die obere Schicht mit kaum veränderten Blättern, Zweigen und Früchten ist die <b>Streuschicht</b>." },
+ { q:"Spur 2: Darunter werden die Blätter dunkel, zerfallen in Bruchstücke und sind kaum noch zu erkennen. Welche Schicht ist das?",
+   vis: profil(2),
+   o:[{t:"Vermoderungsschicht",ok:true},{t:"Streuschicht"},{t:"Totholzschicht"},{t:"Gesteinsschicht"}],
+   tipp:"Hier ist das Laub schon stark zersetzt. Es ist nicht mehr frisch.",
+   e:"Das ist die <b>Vermoderungsschicht</b>. Hier sind die Blätter schon dunkel und zerfallen." },
+ { q:"Spur 3: Wer steckt hinter dem verschwundenen Laub? Formuliere die Definition: Was sind Destruenten?",
+   o:[{t:"Destruenten sind Lebewesen, die sich von totem organischem Material ernähren und es durch Abbau in einfachere Stoffe zerlegen.",ok:true},
+      {t:"Destruenten sind Lebewesen, die mithilfe von Licht aus einfachen Stoffen Zucker aufbauen."},
+      {t:"Destruenten sind Tiere, die lebende Tiere jagen und fressen."},
+      {t:"Destruenten sind Lebewesen, die sich von lebenden Pflanzen ernähren und diese schädigen."}],
+   tipp:"Denke an das Wort „Zersetzer“: Wovon leben diese Lebewesen, und was machen sie damit?",
+   e:"<b>Destruenten</b> sind Lebewesen, die sich von totem organischem Material ernähren und es durch Abbau in einfachere Stoffe zerlegen." },
+ { q:"Spur 4: Warum sind Totholz und Laub für Destruenten attraktiv? Was steckt darin?",
+   o:[{t:"Sie enthalten energiereiche Stoffe wie Stärke, Zucker, Eiweiße und Vitamine, die Destruenten als Nahrungsquelle und Energielieferant nutzen.",ok:true},
+      {t:"Sie enthalten Chlorophyll, mit dem Destruenten Fotosynthese betreiben."},
+      {t:"Sie enthalten fast nur Mineralsalze, die Destruenten direkt als Dünger aufnehmen."},
+      {t:"Sie enthalten gar keine Nährstoffe mehr, deshalb stören sie niemanden."}],
+   tipp:"Destruenten brauchen Nahrung und Energie. Was steckt in Blättern und unter der Rinde?",
+   e:"Totholz und Laub enthalten <b>energiereiche Stoffe wie Stärke, Zucker, Eiweiße und Vitamine</b>, die Destruenten als Nahrungsquelle und Energielieferant nutzen." },
+ { q:"Letzte Spur: Es gibt noch einen zweiten Grund. Warum lässt sich Laub und Totholz leicht abbauen?",
+   o:[{t:"Das Material ist bereits abgestorben und leicht zugänglich, was den Abbau ermöglicht.",ok:true},
+      {t:"Das Material ist lebendig und kann sich nicht gegen Destruenten wehren."},
+      {t:"Das Material ist hart und fest verschlossen, sodass nur wenige Destruenten daran kommen."},
+      {t:"Das Material ist giftig, sodass Konkurrenten fernbleiben."}],
+   tipp:"Überlege, in welchem Zustand sich Laub und Totholz befinden. Leben sie noch?",
+   e:"Diese Materialien sind <b>bereits abgestorben und leicht zugänglich</b>, was den Abbau ermöglicht." }
+];
+
+/* ================= ABLAUF ================= */
+const chat=document.getElementById("chat"), answers=document.getElementById("answers"),
+      bar=document.getElementById("bar"), statusEl=document.getElementById("status"),
+      app=document.getElementById("app");
+
+let runde=FRAGEN.map((_,i)=>i), pos=0, falsch=[], geloest=0, rundenNr=1;
+
+function zeit(){const d=new Date();return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0")}
+function nachUnten(){chat.scrollTop=chat.scrollHeight}
+function msg(html,cls,user){
+  const d=document.createElement("div");d.className="msg "+cls;
+  d.innerHTML=html+'<span class="zeit">'+zeit()+(user?' <b>✓✓</b>':'')+'</span>';
+  chat.appendChild(d);nachUnten();return d;
+}
+function bot(html,extra=""){return msg('<span class="name">Kommissarin Laubach</span>'+html,"bot "+extra)}
+function typing(cb,ms=900){
+  statusEl.textContent="schreibt …";
+  const t=document.createElement("div");t.className="msg bot typing";t.innerHTML="<span></span><span></span><span></span>";
+  chat.appendChild(t);nachUnten();
+  setTimeout(()=>{t.remove();statusEl.textContent="online";cb()},ms);
+}
+function shuffle(a){return a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1])}
+
+function frage(){
+  const nr=runde[pos], f=FRAGEN[nr];
+  typing(()=>{
+    let html=f.q;
+    if(rundenNr>1) html='<i>🔁 Wiederholung:</i> '+html+'<br><br>💡 <b>Tipp:</b> '+f.tipp;
+    if(f.vis) html+=f.vis;
+    bot(html);
+    answers.innerHTML="";
+    shuffle(f.o).forEach(o=>{
+      const b=document.createElement("button");b.className="opt";b.textContent=o.t;
+      b.onclick=()=>pruefe(o,nr,f);answers.appendChild(b);
+    });
+  });
+}
+
+function pruefe(o,nr,f){
+  answers.innerHTML="";
+  msg(o.t,"user",true);
+  if(o.ok){
+    geloest++;bar.style.width=(geloest/FRAGEN.length*100)+"%";
+    typing(()=>{
+      bot("✅ <b>"+lob(rundenNr>1)+"</b><br>"+f.e,"ok");
+      weiter();
+    },750);
+  }else{
+    falsch.push(nr);
+    typing(()=>{
+      bot("🤔 Das passt noch nicht. "+f.tipp+"<br>Kein Problem: Ich frage dich diese Spur am Ende noch einmal.","nok");
+      weiter();
+    },750);
+  }
+}
+
+function weiter(){
+  pos++;
+  if(pos<runde.length){frage();return}
+  if(falsch.length===0){ende();return}
+  rundenNr++;
+  runde=falsch.slice();falsch=[];pos=0;
+  typing(()=>{
+    bot("📋 Ein paar Spuren sind noch offen. Ich frage <b>"+runde.length+(runde.length===1?" Frage":" Fragen")+"</b> noch einmal ab. Erst wenn <b>alle</b> Spuren richtig gesichert sind, bekommst du den Code. 🔐💪","info");
+    frage();
+  },900);
+}
+
+/* ================= ABSCHLUSS ================= */
+function emojiRegen(){
+  const liste=["🎉","🎊","🌟","⭐","🕵️","🔍","🍂","🍃","🌲","🏆","👏","✨","🥳","🍄","🐛","🔐"];
+  for(let i=0;i<40;i++){
+    setTimeout(()=>{
+      const e=document.createElement("span");
+      e.className="regen";
+      e.textContent=liste[Math.floor(Math.random()*liste.length)];
+      e.style.left=Math.random()*95+"%";
+      e.style.animationDuration=(2.5+Math.random()*2.5)+"s";
+      app.appendChild(e);
+      setTimeout(()=>e.remove(),5500);
+    },i*90);
+  }
+}
+
+function ende(){
+  typing(()=>{
+    const s=document.createElement("div");s.className="stempel";s.innerHTML="🔍 SPURENSICHERUNG<br>ABGESCHLOSSEN ✅";
+    chat.appendChild(s);
+    bot('<span class="emojis">🎉🥳🎊🏆🎉</span>'+ 
+        '<span class="gross">Super gemacht! 👏🌟</span>'+ 
+        'Alle Spuren sind gesichert! 🕵️‍♀️🔍 Hier ist dein geheimer Code:'+ 
+        '<div class="codebox"><span class="label">🔐 Dein Code 🔐</span>'+ 
+        '<span class="zahl">'+CODE+'</span></div>'+ 
+        'Merke dir diese Zahl oder schreibe sie auf! ✍️📝'+ 
+        '<span class="emojis">🌲🍂🍄🐛🍃🔎✨💚🔓</span>',"finale");
+    emojiRegen();
+    nachUnten();
+  },900);
+}
+
+/* ================= START ================= */
+chat.insertAdjacentHTML("beforeend",'<div class="tagchip">Heute</div>');
+typing(()=>{
+  bot("Guten Tag, Boden-Detektiv*in! 🕵️ Der Fall des verschwundenen Laubs wartet. Beantworte meine Fragen zu <b>Station 1: Der Tatort – der Waldboden</b>. Falls eine Antwort nicht stimmt, frage ich am Ende noch einmal nach. Wenn du alles richtig hast, bekommst du einen <b>geheimen Code</b>. 🔐 Bereit? 🍂🔍");
+  const b=document.createElement("button");b.className="opt";b.textContent="🔍 Ermittlung starten";
+  b.onclick=()=>{answers.innerHTML="";msg("Ermittlung starten","user",true);frage()};
+  answers.appendChild(b);
+},600);
+</script>
+</body>
+</html>
