@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spurensicherung Station 2 – Die Verdächtigen</title>
+<style>
+  :root{--wa-dunkel:#075E54;--wa-gruen:#128C7E;--blase-user:#DCF8C6;--bg:#ECE5DD;--text:#303030}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",Calibri,Arial,sans-serif;background:#cfd8cc;display:flex;justify-content:center;min-height:100vh}
+  .app{width:100%;max-width:480px;height:100vh;display:flex;flex-direction:column;background:var(--bg);box-shadow:0 0 20px rgba(0,0,0,.25);position:relative;overflow:hidden}
+  header{background:var(--wa-dunkel);color:#fff;padding:10px 12px;display:flex;align-items:center;gap:10px}
+  .back{font-size:20px}
+  .avatar{width:40px;height:40px;border-radius:50%;background:#dcf8c6;display:flex;align-items:center;justify-content:center;font-size:22px}
+  header h1{font-size:16.5px;font-weight:600;line-height:1.15}
+  header small{font-size:12px;opacity:.85}
+  #progress{height:4px;background:#b7d8c9}
+  #bar{height:100%;width:0;background:#25D366;transition:width .5s}
+  #chat{flex:1;overflow-y:auto;padding:12px 10px;display:flex;flex-direction:column;gap:6px;
+    background-image:radial-gradient(rgba(0,0,0,.035) 1px,transparent 1px);background-size:14px 14px}
+  .tagchip{align-self:center;background:#e1f2fb;color:#54656f;font-size:12px;padding:4px 10px;border-radius:8px;box-shadow:0 1px 1px rgba(0,0,0,.1)}
+  .msg{max-width:86%;padding:7px 10px 6px;border-radius:9px;font-size:15px;line-height:1.38;color:var(--text);
+    box-shadow:0 1px 1px rgba(0,0,0,.13);animation:pop .22s ease;position:relative}
+  .bot{background:#fff;align-self:flex-start;border-top-left-radius:0}
+  .user{background:var(--blase-user);align-self:flex-end;border-top-right-radius:0}
+  .name{display:block;color:var(--wa-gruen);font-size:12.5px;font-weight:600;margin-bottom:2px}
+  .zeit{display:block;text-align:right;font-size:10.5px;color:#8a8a8a;margin-top:2px}
+  .user .zeit b{color:#34B7F1;font-weight:700;margin-left:2px}
+  .ok{border-left:5px solid #25D366}
+  .nok{border-left:5px solid #e57373}
+  .info{border-left:5px solid #ffb300;background:#fffbe6}
+  .finale{border-left:5px solid #25D366;background:#f1fff0;font-size:16px;text-align:center}
+  .finale .emojis{font-size:26px;line-height:1.5;display:block}
+  .finale .gross{display:block;font-weight:800;font-size:18px;color:var(--wa-dunkel);margin:6px 0}
+  .codebox{margin:10px 0 6px;padding:12px 10px;border:3px dashed var(--wa-dunkel);border-radius:12px;background:#fff;animation:glow 1.6s infinite}
+  .codebox .label{display:block;font-size:13px;font-weight:700;color:var(--wa-gruen);letter-spacing:1px;text-transform:uppercase}
+  .codebox .zahl{display:block;font-size:44px;font-weight:900;letter-spacing:10px;color:var(--wa-dunkel);font-family:"Courier New",monospace;margin:4px 0 2px;padding-left:10px}
+  @keyframes glow{50%{box-shadow:0 0 14px 3px rgba(37,211,102,.55)}}
+  .stempel{align-self:center;border:3px solid var(--wa-dunkel);color:var(--wa-dunkel);font-weight:800;letter-spacing:2px;
+    padding:8px 16px;border-radius:8px;transform:rotate(-4deg);background:#fff;text-align:center;animation:pop .4s ease}
+  .typing{display:flex;gap:4px;padding:12px 14px}
+  .typing span{width:8px;height:8px;border-radius:50%;background:#9aa7a1;animation:bl 1s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes bl{0%,80%,100%{opacity:.3}40%{opacity:1}}
+  @keyframes pop{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+  #answers{background:#f0f0f0;padding:8px;display:flex;flex-direction:column;gap:6px;border-top:1px solid #ddd;max-height:46vh;overflow-y:auto}
+  #answers:empty{display:none}
+  .opt{background:#fff;border:1.5px solid var(--wa-gruen);color:var(--wa-dunkel);border-radius:18px;padding:9px 14px;font-size:14.5px;
+    text-align:left;cursor:pointer;font-family:inherit;line-height:1.3;transition:.15s}
+  .opt:hover,.opt:active{background:var(--wa-gruen);color:#fff}
+  .regen{position:absolute;top:-40px;font-size:26px;pointer-events:none;animation:fall linear forwards;z-index:10}
+  @keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:.9}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <span class="back">←</span>
+    <div class="avatar">🕵️</div>
+    <div><h1>Kommissarin Laubach</h1><small id="status">online</small></div>
+  </header>
+  <div id="progress"><div id="bar"></div></div>
+  <div id="chat"></div>
+  <div id="answers"></div>
+</div>
+
+<script>
+/* ================= EINSTELLUNGEN ================= */
+const CODE = "3897";
+
+const LOB = ["Super gemacht! 👏","Volltreffer! 🎯","Genau so! 🕵️","Bravo, scharfer Blick! 🔍","Stark ermittelt! 💪",
+  "Top, Detektiv*in! ⭐","Richtig kombiniert! 🧠","Messerscharf! 🔎","Glänzend! ✨","Das sitzt! 🙌","Spitze! 🌟","Ein echtes Ermittlungstalent! 🏅"];
+const LOB2 = ["Diesmal sitzt es! 💪","Zweiter Versuch, voller Erfolg! 🎉","Gut nachgedacht, jetzt stimmt es! 👏","Dranbleiben hat sich gelohnt! 🌟"];
+let letztesLob = -1;
+function lob(zweite){
+  const liste = zweite ? LOB2 : LOB; let i;
+  do { i = Math.floor(Math.random()*liste.length); } while(i===letztesLob && liste.length>1);
+  letztesLob = i; return liste[i];
+}
+
+/* ================= FRAGEN (Station 2: Die Verdächtigen) ================= */
+const FRAGEN = [
+ { q:"Spur 1: Alle Lebewesen aus 100 g Waldboden kommen auf die Waage. Drei Gruppen bringen zusammen fast die gesamte Masse auf die Waage. Welche sind es? ⚖️",
+   o:[{t:"Bakterien, Pilze und Regenwürmer (je 100 g)",ok:true},
+      {t:"Springschwänze, Milben und Asseln"},
+      {t:"Spinnen, Tausendfüßer und Schnecken"},
+      {t:"Bakterien, Milben und Spinnen"}],
+   tipp:"Schau in deine Tabelle: Drei Gruppen wiegen jeweils 100 g.",
+   e:"Die drei „Schwergewichte“ sind <b>Bakterien, Pilze und Regenwürmer</b> mit je 100 g." },
+ { q:"Spur 2: Vergleiche jetzt die Anzahl mit der Masse. Was fällt dir auf? 🤔",
+   o:[{t:"60 Billionen Bakterien wiegen genauso viel wie nur 200 Regenwürmer. Anzahl und Masse hängen nicht zusammen.",ok:true},
+      {t:"Je mehr Lebewesen es in einer Gruppe gibt, desto mehr Masse bringt sie auf die Waage."},
+      {t:"Regenwürmer sind zahlreicher als Bakterien, deshalb wiegen beide gleich viel."},
+      {t:"Bakterien wiegen zusammen viel weniger als Regenwürmer, weil sie so klein sind."}],
+   tipp:"Vergleiche: 60 Billionen Bakterien und 200 Regenwürmer. Wie viel wiegt jede Gruppe?",
+   e:"Mikroorganismen sind zahlreich, aber winzig. Große Tiere wie Regenwürmer bringen mit wenigen Exemplaren viel Masse. <b>Anzahl und Masse hängen nicht zusammen.</b>" },
+ { q:"Spur 3: Rechne mit! 🧮 60 Billionen Bakterien (60 000 000 000 000) wiegen 100 g, genauso viel wie 200 Regenwürmer. Wie viele Bakterien kommen rechnerisch auf einen Regenwurm?",
+   o:[{t:"300 Milliarden (300 000 000 000)",ok:true},
+      {t:"300 Millionen (300 000 000)"},
+      {t:"30 Billionen (30 000 000 000 000)"},
+      {t:"3 Billionen (3 000 000 000 000)"}],
+   tipp:"Teile 60 000 000 000 000 durch 200.",
+   e:"60 000 000 000 000 ÷ 200 = <b>300 000 000 000</b>, also 300 Milliarden Bakterien pro Regenwurm." },
+ { q:"Spur 4: Ein Regenwurm ist 300 Milliarden Mal schwerer als ein Bakterium. Trotzdem bauen Bakterien viel Material ab. Warum? 🦠",
+   o:[{t:"Viele winzige Bakterien haben zusammen eine riesige Gesamtoberfläche. Darüber nehmen sie Stoffe effektiv auf und bauen sie ab.",ok:true},
+      {t:"Bakterien sind schwerer als Regenwürmer und können deshalb mehr abbauen."},
+      {t:"Bakterien fressen das Laub in großen Stücken, ähnlich wie Schnecken."},
+      {t:"Bakterien haben eine besonders kleine Gesamtoberfläche und sparen dadurch Energie."}],
+   tipp:"Überlege: Was passiert mit der Oberfläche, wenn man etwas in unzählige winzige Teile zerlegt?",
+   e:"Durch die <b>Oberflächenvergrößerung</b> ist der Stoffaustausch viel effizienter. Bakterien können prozentual viel mehr Material zersetzen als einzelne große Organismen." },
+ { q:"Spur 5: Verdächtige nach Rollen sortiert 🗂️ Welche Gruppe besteht nur aus <b>Zersetzern</b>, die Laub und Holz fressen?",
+   o:[{t:"Regenwurm, Assel, Springschwanz, Schnecke, Tausendfüßer",ok:true},
+      {t:"Regenwurm, Spinne, Assel, Schnecke"},
+      {t:"Pilze, Bakterien, Spinne, Tausendfüßer"},
+      {t:"Springschwanz, Spinne, Milbe (räuberisch), Assel"}],
+   tipp:"Zersetzer fressen Laub und Holz. Räuber jagen andere Tiere.",
+   e:"Zu den <b>Zersetzern</b> zählen Regenwurm, Assel, Springschwanz, Schnecke und Tausendfüßer (und teilweise Milben). Sie fressen Laub und Holz." },
+ { q:"Spur 6: Wer hat ein <b>Alibi</b>, weil er kein Laub frisst, sondern andere Bodentiere jagt? 🕷️",
+   o:[{t:"Die Spinne (Räuber)",ok:true},
+      {t:"Der Regenwurm"},
+      {t:"Die Assel"},
+      {t:"Der Springschwanz"}],
+   tipp:"Wer von ihnen ist ein Jäger und frisst keine Pflanzenteile?",
+   e:"Die <b>Spinne</b> ist ein Räuber. Auch räuberische Milben gehören dazu. Sie fressen kein Laub, sondern jagen andere Bodentiere. Darum haben sie ein Alibi." },
+ { q:"Letzte Spur: Wer sind die eigentlichen <b>Haupttäter</b> und warum? 🔎",
+   o:[{t:"Bakterien und Pilze. Sie mineralisieren die feinen Partikel vollständig zu Mineralsalzen und beenden so die Zersetzung.",ok:true},
+      {t:"Regenwürmer und Asseln. Sie zerkleinern das Laub und beenden damit die Zersetzung."},
+      {t:"Spinnen und räuberische Milben. Sie fressen die Zersetzer und stoppen so den Abbau."},
+      {t:"Schnecken und Tausendfüßer. Sie wandeln das Laub direkt in Mineralsalze um."}],
+   tipp:"Wer baut die winzigsten Teilchen ganz bis zu Mineralsalzen ab?",
+   e:"<b>Bakterien und Pilze</b> sind die Mineralisierer und damit die Haupttäter. Die Spinnen haben dagegen ein Alibi." }
+];
+
+/* ================= ABLAUF ================= */
+const chat=document.getElementById("chat"), answers=document.getElementById("answers"),
+      bar=document.getElementById("bar"), statusEl=document.getElementById("status"),
+      app=document.getElementById("app");
+
+let runde=FRAGEN.map((_,i)=>i), pos=0, falsch=[], geloest=0, rundenNr=1;
+
+function zeit(){const d=new Date();return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0")}
+function nachUnten(){chat.scrollTop=chat.scrollHeight}
+function msg(html,cls,user){
+  const d=document.createElement("div");d.className="msg "+cls;
+  d.innerHTML=html+'<span class="zeit">'+zeit()+(user?' <b>✓✓</b>':'')+'</span>';
+  chat.appendChild(d);nachUnten();return d;
+}
+function bot(html,extra=""){return msg('<span class="name">Kommissarin Laubach</span>'+html,"bot "+extra)}
+function typing(cb,ms=900){
+  statusEl.textContent="schreibt …";
+  const t=document.createElement("div");t.className="msg bot typing";t.innerHTML="<span></span><span></span><span></span>";
+  chat.appendChild(t);nachUnten();
+  setTimeout(()=>{t.remove();statusEl.textContent="online";cb()},ms);
+}
+function shuffle(a){return a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1])}
+
+function frage(){
+  const nr=runde[pos], f=FRAGEN[nr];
+  typing(()=>{
+    let html=f.q;
+    if(rundenNr>1) html='<i>🔁 Wiederholung:</i> '+html+'<br><br>💡 <b>Tipp:</b> '+f.tipp;
+    if(f.vis) html+=f.vis;
+    bot(html);
+    answers.innerHTML="";
+    shuffle(f.o).forEach(o=>{
+      const b=document.createElement("button");b.className="opt";b.textContent=o.t;
+      b.onclick=()=>pruefe(o,nr,f);answers.appendChild(b);
+    });
+  });
+}
+
+function pruefe(o,nr,f){
+  answers.innerHTML="";
+  msg(o.t,"user",true);
+  if(o.ok){
+    geloest++;bar.style.width=(geloest/FRAGEN.length*100)+"%";
+    typing(()=>{
+      bot("✅ <b>"+lob(rundenNr>1)+"</b><br>"+f.e,"ok");
+      weiter();
+    },750);
+  }else{
+    falsch.push(nr);
+    typing(()=>{
+      bot("🤔 Das passt noch nicht. "+f.tipp+"<br>Kein Problem: Ich frage dich diese Spur am Ende noch einmal.","nok");
+      weiter();
+    },750);
+  }
+}
+
+function weiter(){
+  pos++;
+  if(pos<runde.length){frage();return}
+  if(falsch.length===0){ende();return}
+  rundenNr++;
+  runde=falsch.slice();falsch=[];pos=0;
+  typing(()=>{
+    bot("📋 Ein paar Spuren sind noch offen. Ich frage <b>"+runde.length+(runde.length===1?" Frage":" Fragen")+"</b> noch einmal ab. Erst wenn <b>alle</b> Spuren richtig gesichert sind, bekommst du den Code. 🔐💪","info");
+    frage();
+  },900);
+}
+
+/* ================= ABSCHLUSS ================= */
+function emojiRegen(){
+  const liste=["🎉","🎊","🌟","⭐","🕵️","🔍","🍂","🍃","🌲","🏆","👏","✨","🥳","🍄","🐛","🔐"];
+  for(let i=0;i<40;i++){
+    setTimeout(()=>{
+      const e=document.createElement("span");
+      e.className="regen";
+      e.textContent=liste[Math.floor(Math.random()*liste.length)];
+      e.style.left=Math.random()*95+"%";
+      e.style.animationDuration=(2.5+Math.random()*2.5)+"s";
+      app.appendChild(e);
+      setTimeout(()=>e.remove(),5500);
+    },i*90);
+  }
+}
+
+function ende(){
+  typing(()=>{
+    const s=document.createElement("div");s.className="stempel";s.innerHTML="🔍 SPURENSICHERUNG<br>ABGESCHLOSSEN ✅";
+    chat.appendChild(s);
+    bot('<span class="emojis">🎉🥳🎊🏆🎉</span>'+ 
+        '<span class="gross">Super gemacht! 👏🌟</span>'+ 
+        'Alle Verdächtigen sind überführt! 🕵️‍♀️🔍 Hier ist dein geheimer Code:'+ 
+        '<div class="codebox"><span class="label">🔐 Dein Code 🔐</span>'+ 
+        '<span class="zahl">'+CODE+'</span></div>'+ 
+        'Merke dir diese Zahl oder schreibe sie auf! ✍️📝'+ 
+        '<span class="emojis">🌲🍂🍄🐛🍃🔎✨💚🔓</span>',"finale");
+    emojiRegen();
+    nachUnten();
+  },900);
+}
+
+/* ================= START ================= */
+chat.insertAdjacentHTML("beforeend",'<div class="tagchip">Heute</div>');
+typing(()=>{
+  bot("Willkommen zurück, Boden-Detektiv*in! 🕵️ Jetzt nehmen wir <b>Station 2: Die Verdächtigen</b> unter die Lupe. 🔎🦠🐛 Falls eine Antwort nicht stimmt, frage ich am Ende noch einmal nach. Wenn du alles richtig hast, bekommst du einen <b>geheimen Code</b>. 🔐 Bereit? 🍂");
+  const b=document.createElement("button");b.className="opt";b.textContent="🔍 Ermittlung starten";
+  b.onclick=()=>{answers.innerHTML="";msg("Ermittlung starten","user",true);frage()};
+  answers.appendChild(b);
+},600);
+</script>
+</body>
+</html>
